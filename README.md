@@ -5,9 +5,6 @@
 
 <br />
 
-Escritura, planificación narrativa y colaboración.<br />
-Desde la primera idea hasta la versión definitiva.
-
 <br />
 
 ![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-619CF5?style=flat-square&logo=windows&logoColor=white)
