@@ -151,7 +151,21 @@ TTS_CACHE = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "Trelby-HTM
 PIPER_INFO = {  # nombre y género de las voces bajadas
     "es_AR-daniela-high": ("Daniela", "F"), "es_MX-ald-medium": ("Ald", "M"),
     "en_US-lessac-medium": ("Lessac", "F"), "en_US-ryan-medium": ("Ryan", "M"),
+    "es_ES-davefx-medium": ("Davefx", "M"), "es_ES-sharvard-medium": ("Sharvard", ""),
+    "es_MX-claude-high": ("Claude", "M"),
 }
+# voces que se pueden bajar desde la app (Hugging Face, rhasspy/piper-voices); sha256 = el que publica HF
+PIPER_HF = "https://huggingface.co/rhasspy/piper-voices/resolve/main/"
+PIPER_CATALOG = {
+    "es_AR-daniela-high": ("es/es_AR/daniela/high", 114199011, "7ceb1fc0dab349418c5b54a639ae9ee595212d7c9ea422220d8419163d5cc985"),
+    "es_MX-ald-medium": ("es/es_MX/ald/medium", 63221984, "6ca4b9bc22b3fa19792c212822186fa0f34cb73c1bdced6be83e4038aa946e10"),
+    "es_MX-claude-high": ("es/es_MX/claude/high", 63122309, "3ef40a71ea63852cd8ab7e6fa7d2ecdcfa67a0b47c9c48e3f10e02ee02083ea0"),
+    "es_ES-davefx-medium": ("es/es_ES/davefx/medium", 63221984, "d2c9224e122321aac3c33343957fff4d0f465226cb74c66b0f520ca3f8c0dd07"),
+    "es_ES-sharvard-medium": ("es/es_ES/sharvard/medium", 76753841, "234dc4cf0fdb53ccb76b9b2c4d7ef1330364762674c1b78c1b62d8608c528a54"),
+    "en_US-lessac-medium": ("en/en_US/lessac/medium", 63201294, "5efe09e69902187827af646e1a6e9d269dee769f9877d17b16b1b46eeaaf019f"),
+    "en_US-ryan-medium": ("en/en_US/ryan/medium", 63221984, "33b53106e049f68a51f014e4fa10bf5a04e0f7d6668692dc05228cc4554c1d71"),
+}
+_vdl = {}  # descargas: id -> {"done", "total", "error", "ok"}
 _piper, _piper_lock, _edge_list = {}, threading.Lock(), None
 
 
@@ -161,6 +175,64 @@ def piper_voices():
         name, g = PIPER_INFO.get(f.stem, (f.stem.split("-")[1].title(), ""))
         out.append({"id": f.stem, "name": name, "lang": f.stem.split("-")[0].replace("_", "-"), "gender": g})
     return out
+
+
+def voice_catalog():
+    out = []
+    for vid, (path, size, sha) in PIPER_CATALOG.items():
+        name, g = PIPER_INFO.get(vid, (vid.split("-")[1].title(), ""))
+        st = _vdl.get(vid) or {}
+        out.append({"id": vid, "name": name, "lang": vid.split("-")[0].replace("_", "-"), "gender": g, "size": size,
+                    "installed": (VOICES_DIR / f"{vid}.onnx").exists() and (VOICES_DIR / f"{vid}.onnx.json").exists(),
+                    "downloading": bool(st) and not st.get("ok") and not st.get("error"),
+                    "done": st.get("done", 0), "error": st.get("error", "")})
+    return out
+
+
+def voice_download(vid):
+    """Baja la voz en segundo plano a voces/ (primero .part, comprueba el sha256 y recién ahí la deja)."""
+    import urllib.request
+    path, size, sha = PIPER_CATALOG[vid]
+    st = _vdl[vid] = {"done": 0, "total": size}
+    VOICES_DIR.mkdir(parents=True, exist_ok=True)
+    part = VOICES_DIR / f"{vid}.onnx.part"
+    try:
+        def get(url):
+            return urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Scripting"}), timeout=60)
+        with get(f"{PIPER_HF}{path}/{vid}.onnx.json") as r:
+            meta = r.read(200000)
+        json.loads(meta)  # que sea JSON de verdad
+        h = hashlib.sha256()
+        with get(f"{PIPER_HF}{path}/{vid}.onnx") as r, open(part, "wb") as f:
+            while True:
+                chunk = r.read(1 << 20)
+                if not chunk:
+                    break
+                f.write(chunk)
+                h.update(chunk)
+                st["done"] += len(chunk)
+        if h.hexdigest() != sha:
+            raise RuntimeError("el archivo bajado no coincide con el publicado; probá de nuevo")
+        (VOICES_DIR / f"{vid}.onnx.json").write_bytes(meta)
+        os.replace(part, VOICES_DIR / f"{vid}.onnx")
+        st["ok"] = True
+    except Exception as e:
+        st["error"] = str(e) or e.__class__.__name__
+        try:
+            part.unlink()
+        except OSError:
+            pass
+
+
+def voice_delete(vid):
+    with _piper_lock:
+        _piper.pop(vid, None)
+    for ext in (".onnx", ".onnx.json"):
+        try:
+            (VOICES_DIR / f"{vid}{ext}").unlink()
+        except FileNotFoundError:
+            pass
+    _vdl.pop(vid, None)
 
 
 def edge_voices():
@@ -352,6 +424,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(update_check(q.get("force", ["0"])[0] == "1"))
             except Exception as e:
                 return self._json({"error": f"No pude consultar GitHub: {e}", "current": app_version()}, 502)
+        if url.path == "/api/voices/catalog":
+            return self._json({"voices": voice_catalog()})
         if url.path == "/api/update/version":
             return self._json({"version": app_version()})
         if url.path == "/api/mirror":
@@ -436,6 +510,18 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json({"error": "origen no permitido"}, 403)
         url = urlparse(self.path)
         q = parse_qs(url.query)
+        if url.path in ("/api/voices/download", "/api/voices/delete"):
+            vid = q.get("id", [""])[0]
+            if vid not in PIPER_CATALOG:
+                return self._json({"error": "voz desconocida"}, 400)
+            if url.path.endswith("delete"):
+                voice_delete(vid)
+                return self._json({"ok": True})
+            st = _vdl.get(vid)
+            if st and not st.get("ok") and not st.get("error"):
+                return self._json({"ok": True, "already": True})
+            threading.Thread(target=voice_download, args=(vid,), daemon=True).start()
+            return self._json({"ok": True})
         if url.path == "/api/update/apply":
             try:
                 res = update_apply()

@@ -340,6 +340,12 @@ html.light .b[data-cm]:not([data-cm=""]){background:#e0a84f33}
 .player .pos{color:var(--muted);font-size:11px;white-space:nowrap;min-width:54px;text-align:center}
 .castpanel{position:fixed;left:50%;bottom:104px;transform:translateX(-50%);width:460px;max-height:50vh;overflow:auto;background:rgba(32,33,37,.98);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 30px #000a;padding:12px;z-index:13;animation:popin .15s}
 .castpanel[hidden]{display:none}
+.vodl{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.vodl .vr{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:4px 0;font-size:12px}
+.vodl .vr small{color:var(--muted);margin-left:6px}
+.vodl .bar{grid-column:1/-1;height:4px;border-radius:2px;background:var(--lane);overflow:hidden}
+.vodl .bar i{display:block;height:100%;background:var(--accent);width:0}
+.vodl .ok{color:#4caf7d}.vodl .err{grid-column:1/-1;color:#e06c75;font-size:11px}
 .castpanel h4{font-size:13px;margin-bottom:2px}.castpanel p{color:var(--muted);font-size:11px;margin-bottom:10px}
 .castpanel .row{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;align-items:center;padding:4px 0}
 .castpanel select{background:var(--lane);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:4px 6px;font:12px "Segoe UI"}
@@ -2756,8 +2762,28 @@ function drawCastPanel(){
   const list=VO[tts.engine]||[];
   $("castPanel").innerHTML=`<h4>Voces del reparto</h4><p>${tts.engine==="edge"?"Edge: el texto se manda a Microsoft para generar el audio.":tts.engine==="piper"?"Piper: todo se genera en tu PC.":"Voces instaladas de Windows."} Lo generado se guarda: releer es instantáneo.</p>`+
     roles().map(r=>`<div class="row"><span>${esc(r)}</span><select data-r="${escA(r)}">${list.map(v=>`<option value="${escA(v.id)}"${v.id===voiceFor(r)?" selected":""}>${esc(v.name)} · ${esc(v.lang)}${v.gender?" · "+v.gender:""}</option>`).join("")}</select><button data-test="${escA(r)}">▶ Probar</button></div>`).join("");
+  if(SRV)$("castPanel").insertAdjacentHTML("beforeend",`<div class="vodl" id="voDl"><h4>Voces para usar sin internet (Piper)</h4><p>Se bajan una vez de Hugging Face y quedan en esta PC.</p><div id="voDlList">Cargando…</div></div>`),drawVoDl();
   $("castPanel").hidden=false;
 }
+// ---- bajar / borrar voces Piper (servidor: /api/voices/catalog, download, delete) ----
+let voT=null;
+const mb=n=>Math.round(n/1048576)+" MB";
+async function drawVoDl(){const L=$("voDlList");if(!L)return;let c;
+  try{c=(await api("/api/voices/catalog")).voices}catch(e){L.textContent="No pude leer las voces: "+e.message;return}
+  L.innerHTML=c.map(v=>`<div class="vr"><span>${esc(v.name)}<small>${esc(v.lang)}${v.gender?" · "+v.gender:""} · ${mb(v.size)}</small></span>${
+    v.downloading?`<span>${Math.floor(v.done*100/v.size)}%</span><div class="bar"><i style="width:${(v.done*100/v.size).toFixed(1)}%"></i></div>`
+    :v.installed?`<span><span class="ok">✓ Instalada</span> <button data-vdel="${escA(v.id)}" title="Borrar de esta PC">Borrar</button></span>`
+    :`<button data-vdl="${escA(v.id)}">Bajar</button>`}${v.error?`<div class="err">No se pudo bajar: ${esc(v.error)}</div>`:""}</div>`).join("");
+  const going=c.some(v=>v.downloading);clearTimeout(voT);
+  if(going)voT=setTimeout(()=>{if(!$("castPanel").hidden)drawVoDl()},800);
+  const have=c.filter(v=>v.installed).map(v=>v.id).sort().join();
+  if(drawVoDl.have!==undefined&&drawVoDl.have!==have){voLoaded=false;await loadVoices()}drawVoDl.have=have}
+$("castPanel").addEventListener("click",async e=>{const d=e.target.closest("[data-vdl]"),x=e.target.closest("[data-vdel]");if(!d&&!x)return;
+  try{if(d){await api("/api/voices/download?id="+encodeURIComponent(d.dataset.vdl),{method:"POST"});toast("Bajando la voz…")}
+    else{if(!(await window.uiConfirm("Podés volver a bajarla cuando quieras.",{title:"¿Borrar esta voz de la PC?",okText:"Borrar",danger:true})))return;
+      await api("/api/voices/delete?id="+encodeURIComponent(x.dataset.vdel),{method:"POST"});toast("Voz borrada")}}
+  catch(err){toast("No se pudo: "+err.message)}
+  drawVoDl()});
 $("ttsCast").addEventListener("click",()=>{if($("castPanel").hidden)drawCastPanel();else $("castPanel").hidden=true});
 $("castPanel").addEventListener("change",e=>{const s=e.target.closest("select[data-r]");if(!s)return;(tts[tts.engine]||(tts[tts.engine]={}))[s.dataset.r]=s.value;saveTts();drawCast()});
 $("castPanel").addEventListener("click",e=>{const b=e.target.closest("[data-test]");if(!b)return;const r=b.dataset.test;

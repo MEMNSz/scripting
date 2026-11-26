@@ -24,3 +24,4 @@ voces/*.onnx.json
 # Copias que deja cada actualización
 .actualizaciones/
 *.upd-tmp
+voces/*.part
