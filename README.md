@@ -1,4 +1,5 @@
 # Scripting
+<img width="1672" height="941" alt="imagen" src="https://github.com/user-attachments/assets/30135c19-4dac-4093-b534-c863fab31973" />
 
 **Un espacio de trabajo para contar historias.**
 
@@ -44,6 +45,7 @@ Desarrollá la estructura de tu historia antes, durante y después de escribirla
 ## Del guion a la pantalla
 
 Visualizá y escuchá tu historia antes de llevarla a producción.
+<img width="1578" height="944" alt="imagen" src="https://github.com/user-attachments/assets/86ef2db3-b64a-42d1-81d7-b9dcc0dc020c" />
 
 - Storyboard integrado por escenas.
 - Composición de planos y movimientos de cámara.
