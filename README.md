@@ -5,8 +5,6 @@
 
 <br />
 
-**Un espacio de trabajo para contar historias.**
-
 Escritura, planificación narrativa y colaboración.<br />
 Desde la primera idea hasta la versión definitiva.
 
