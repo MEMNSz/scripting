@@ -28,3 +28,13 @@ voces/*.part
 
 # Lanzador con el nombre viejo (solo local)
 Trelby.bat
+
+# Solo de desarrollo (quedan en la PC, no en el repo público)
+DESARROLLO.md
+Scripting.bat
+instalador/
+ventana/*.cs
+ventana/*.csproj
+sync/*
+!sync/src/
+sync/src/*.bak*
