@@ -59,6 +59,22 @@ Una copia que tenga carpeta `.git` (la de desarrollo) no se actualiza sola: se a
 
 Si el número de `VERSION` no coincide con la etiqueta, la app no instala la actualización.
 
+## Instalador
+
+`instalador\scripting.iss` (Inno Setup 7) arma un `Scripting-X-instalador.exe` que:
+
+- se instala solo para el usuario, sin pedir permisos de administrador, en `%LOCALAPPDATA%\Programs\Scripting`;
+- trae su propio Python 3.13 con las librerías de lectura (no hace falta instalar Python);
+- crea los accesos directos.
+
+Al abrir, usa la ventana translúcida si la PC tiene .NET 8 (Escritorio) y, si no, una ventana de Edge.
+
+Para armarlo se ejecuta `instalador\armar.ps1`. Necesita una carpeta de armado fuera del repositorio (por defecto `..\..\instalador-build`) con:
+
+- `python\`: Python embebible con `edge-tts` y `piper-tts`;
+- `exe\`: `Scripting.exe` compilado;
+- `herramientas\InnoSetup\`.
+
 ## Licencia
 
 Todos los derechos reservados. Ver [LICENSE](LICENSE).

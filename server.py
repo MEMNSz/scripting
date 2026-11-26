@@ -43,7 +43,7 @@ last_ping = time.time()
 UPDATE_REPO = "MEMNSz/scripting"
 UPDATE_API = os.environ.get("SCRIPTING_UPDATE_API", "https://api.github.com")  # variable solo para pruebas
 UPDATES_DIR = APP_DIR / ".actualizaciones"   # copias de lo que reemplaza cada actualización
-UPDATE_SKIP = {".git", ".venv", "voces", ".actualizaciones", "__pycache__"}
+UPDATE_SKIP = {".git", ".venv", "voces", ".actualizaciones", "__pycache__", "instalador", "python"}
 _upd = {"t": 0.0, "data": None}
 
 

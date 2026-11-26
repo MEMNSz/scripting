@@ -38,7 +38,9 @@ static class Program
         {
             // la carpeta de la app es la de arriba de ventana\out
             var appDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", ".."));
-            _server = Process.Start(new ProcessStartInfo("pythonw", "server.py --no-window")
+            // instalado: usa el Python que trae el instalador (carpeta python\); si no, el del sistema
+            var py = Path.Combine(appDir, "python", "pythonw.exe");
+            _server = Process.Start(new ProcessStartInfo(File.Exists(py) ? py : "pythonw", "server.py --no-window")
             { WorkingDirectory = appDir, UseShellExecute = false, CreateNoWindow = true });
             for (int i = 0; i < 50 && !PortOpen(); i++) System.Threading.Thread.Sleep(100);
         }
