@@ -10,7 +10,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-619CF5?style=flat-square&logo=windows&logoColor=white)
 ![Local First](https://img.shields.io/badge/Local--first-8174E6?style=flat-square)
 ![Colaboración](https://img.shields.io/badge/Colaboración-En%20vivo-382B88?style=flat-square)
-![Licencia](https://img.shields.io/badge/Licencia-Propietaria-E2A74B?style=flat-square)
+![Licencia](https://img.shields.io/badge/Licencia-MIT-E2A74B?style=flat-square)
 
 <br />
 
@@ -278,9 +278,9 @@ Scripting incorpora un sistema de actualizaciones integrado. Cuando se publica u
 
 ## Licencia
 
-El código fuente de Scripting está disponible para consulta.
+Scripting es software libre bajo la licencia **MIT**: podés usarlo, copiarlo, modificarlo y compartirlo, siempre que conserves el aviso de autoría.
 
-Todos los derechos reservados. Consultá [LICENSE](LICENSE) para conocer las condiciones de uso y las licencias de los componentes de terceros.
+Consultá [LICENSE](LICENSE) para ver el texto completo y las licencias de los componentes de terceros.
 
 ---
 
