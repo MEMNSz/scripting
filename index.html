@@ -64,7 +64,9 @@ button{font:inherit;color:inherit}
 .mzoom{display:flex;gap:2px;align-items:center}
 .mzoom button{background:var(--lane);border:1px solid var(--line);color:var(--muted);border-radius:4px;font:11px/13px "Segoe UI",sans-serif;padding:0 5px;cursor:pointer}
 .mzoom button:hover{color:var(--text);border-color:var(--accent)}
-#sBeat{margin-left:auto;cursor:pointer;padding:0 8px;border-radius:999px;border:1px solid var(--line)}#sBeat:hover{border-color:var(--accent)}#sBeat[hidden]{display:none}#sBeat:not([hidden])+.goal{margin-left:0}   /* a la derecha: el centro del pie lo tapa la zona del dock */
+#sBeat{margin-left:auto;cursor:pointer;padding:0 8px;border-radius:999px;border:1px solid var(--line)}#sBeat:hover{border-color:var(--accent)}#sBeat[hidden]{display:none}#sBeat:not([hidden])~.goal{margin-left:0}
+#sBmk{cursor:pointer;padding:0 7px;border-radius:999px;border:1px solid var(--line);margin-left:4px;opacity:.85}#sBmk:hover{border-color:var(--accent);opacity:1}#sBmk[hidden]{display:none}
+body.nobm #bmarks{display:none}   /* botón ▮ del pie: ocultar las franjas de beats del margen */   /* a la derecha: el centro del pie lo tapa la zona del dock */
 #bmarks .bmb{position:absolute;width:3px;border-radius:2px;opacity:.5}
 #bmarks .bmb.l1{left:62px}#bmarks .bmb.l2{left:70px;opacity:.9}
 #bmarks .bml{position:absolute;left:0;width:58px;text-align:right;font:600 9px/11px "Segoe UI",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1116,7 +1118,7 @@ body.novel .pnum{top:auto;bottom:48px;right:0;left:0;text-align:center;font:13px
 
 <div class="foot">
   <span class="ok" id="sSave">● Guardado</span><span id="sSug" class="schip" title="Modo sugerencia: tus cambios quedan marcados para que otro los acepte o rechace">✎ Editando</span><span id="sStyle" class="schip" title="Revisión de estilo">Estilo</span><span id="sScenes"></span><span id="sMin"></span><span id="sWords"></span>
-  <span id="sBeat" title="Beat que estás escribiendo · clic para empezar otro acá" hidden>◆ Sin beat</span><span class="goal">Objetivo <span id="sTarget">120</span><span id="sUnit"> pp</span> <b><i id="sGoalBar"></i></b> <span id="sGoal"></span></span>
+  <span id="sBeat" title="Beat que estás escribiendo · clic para empezar otro acá" hidden>◆ Sin beat</span><span id="sBmk" hidden>▮ Ocultar beats</span><span class="goal">Objetivo <span id="sTarget">120</span><span id="sUnit"> pp</span> <b><i id="sGoalBar"></i></b> <span id="sGoal"></span></span>
 </div>
 <input type="file" id="file" accept=".fountain,.spmd,.txt" hidden>
 
@@ -1721,7 +1723,13 @@ function beatAt(blk,lane){let best=null,bt=-1;
     const e=b.z&&findRef(b.z);if(e&&e.offsetTop>=s.offsetTop&&blk.offsetTop>e.offsetTop)continue;best=b;bt=s.offsetTop}
   return best}
 function beatChipSoon(){clearTimeout(chipT);chipT=setTimeout(beatChip,150)}
-function beatChip(){const el=$("sBeat");if(!el)return;el.hidden=!beats.some(x=>x.lane);const blk=curBlk(),b=blk&&(beatAt(blk,2)||beatAt(blk,1));
+// ocultar/mostrar las franjas del margen (se recuerda entre sesiones, vale para guion y novela)
+function bmShow(hide){document.body.classList.toggle("nobm",hide);const t=$("sBmk");if(t){t.textContent=hide?"▯ Mostrar beats":"▮ Ocultar beats";
+  t.title=hide?"Volver a mostrar las marcas de beats en el margen":"Ocultar las marcas de beats del margen (no borra nada)"}
+  try{localStorage.setItem("scripting.nobm",hide?"1":"")}catch{}}
+{let h=false;try{h=localStorage.getItem("scripting.nobm")==="1"}catch{};bmShow(h)}
+$("sBmk").addEventListener("click",()=>bmShow(!document.body.classList.contains("nobm")));
+function beatChip(){const el=$("sBeat");if(!el)return;el.hidden=!beats.some(x=>x.lane);const tg=$("sBmk");if(tg)tg.hidden=!beats.some(x=>x.lane&&x.a);const blk=curBlk(),b=blk&&(beatAt(blk,2)||beatAt(blk,1));
   el.textContent=b?"◆ "+b.t:"◆ Sin beat";el.style.color=b?`var(--${b.c||"c1"})`:""}
 function startHere(b){const blk=curBlk()||blocks()[0];if(!blk)return;brecord();b.a=refOf(blk);delete b.z;beatsDone();beatChip();toast(`Desde acá escribís «${b.t}»`);
   if(document.querySelector('[data-v=script]')?.classList.contains("on"))setTimeout(()=>{if(blk.isConnected)place(blk,blk.textContent.length)},30)}   // seguir escribiendo sin otro clic
