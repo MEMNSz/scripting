@@ -20,3 +20,7 @@ ventana/scripting/
 # Voces de lectura: pesadas, se descargan aparte
 voces/*.onnx
 voces/*.onnx.json
+
+# Copias que deja cada actualización
+.actualizaciones/
+*.upd-tmp

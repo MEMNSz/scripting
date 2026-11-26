@@ -22,7 +22,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 HOST = "127.0.0.1"
-PORT = 5170
+PORT = int(os.environ.get("SCRIPTING_PORT", "5170"))  # variable solo para pruebas
 APP_DIR = Path(__file__).resolve().parent
 SCRIPTS = Path.home() / "Documents" / "Guiones"
 VERSIONS = SCRIPTS / ".versiones"
@@ -38,6 +38,106 @@ IMG_MIME = {v: k for k, v in IMG_EXT.items()}
 NAME_RE = re.compile(r"^[^\\/:*?\"<>|]{1,120}\.fountain$")
 
 last_ping = time.time()
+
+# ---------------- actualizaciones (GitHub Releases) ----------------
+UPDATE_REPO = "MEMNSz/scripting"
+UPDATE_API = os.environ.get("SCRIPTING_UPDATE_API", "https://api.github.com")  # variable solo para pruebas
+UPDATES_DIR = APP_DIR / ".actualizaciones"   # copias de lo que reemplaza cada actualización
+UPDATE_SKIP = {".git", ".venv", "voces", ".actualizaciones", "__pycache__"}
+_upd = {"t": 0.0, "data": None}
+
+
+def app_version():
+    try:
+        return (APP_DIR / "VERSION").read_text(encoding="utf-8").strip() or "0.0.0"
+    except OSError:
+        return "0.0.0"
+
+
+def vtuple(v):
+    n = [int(x) for x in re.findall(r"\d+", v or "")[:3]]
+    return tuple(n + [0] * (3 - len(n)))
+
+
+def gh_get(path, accept="application/vnd.github+json"):
+    import urllib.request
+    req = urllib.request.Request(UPDATE_API + path, headers={"User-Agent": "Scripting-updater", "Accept": accept})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.read()
+
+
+def update_check(force=False):
+    if not force and _upd["data"] and time.time() - _upd["t"] < 1800:
+        return _upd["data"]
+    import urllib.error
+    cur, dev = app_version(), (APP_DIR / ".git").exists()
+    try:
+        rel = json.loads(gh_get(f"/repos/{UPDATE_REPO}/releases/latest"))
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise
+        rel = {}  # todavía no hay ninguna versión publicada
+    tag = rel.get("tag_name", "")
+    data = {"current": cur, "latest": tag.lstrip("vV"), "tag": tag, "newer": bool(tag) and vtuple(tag) > vtuple(cur),
+            "name": rel.get("name") or tag, "notes": (rel.get("body") or "")[:4000], "url": rel.get("html_url", ""), "dev": dev}
+    _upd.update(t=time.time(), data=data)
+    return data
+
+
+def update_apply():
+    import io
+    import zipfile
+    info = update_check(force=True)
+    if info["dev"]:
+        raise RuntimeError("Esta es la copia de desarrollo (tiene .git): se actualiza con git pull.")
+    if not info["newer"]:
+        raise RuntimeError("Ya tenés la última versión.")
+    z = zipfile.ZipFile(io.BytesIO(gh_get(f"/repos/{UPDATE_REPO}/zipball/{info['tag']}", accept="*/*")))
+    names = z.namelist()
+    root = names[0].split("/")[0] + "/"
+    base, files = APP_DIR.resolve(), {}
+    for n in names:
+        if n.endswith("/") or not n.startswith(root):
+            continue
+        rel = n[len(root):]
+        parts = Path(rel).parts
+        if not parts or ".." in parts or parts[0] in UPDATE_SKIP or Path(rel).is_absolute():
+            continue
+        dst = (APP_DIR / rel).resolve()
+        if base not in dst.parents:
+            continue
+        files[rel] = (n, dst)
+    for need in ("index.html", "server.py", "VERSION"):
+        if need not in files:
+            raise RuntimeError(f"El paquete no trae {need}.")
+    newv = z.read(files["VERSION"][0]).decode("utf-8").strip()
+    if vtuple(newv) != vtuple(info["tag"]):
+        raise RuntimeError(f"El paquete dice versión {newv} y la publicada es {info['tag']}.")
+    old = app_version()
+    bdir = UPDATES_DIR / f"{old}-{datetime.now():%Y%m%d-%H%M%S}"
+    for rel, (n, dst) in files.items():  # copia de lo que se va a pisar
+        if dst.exists():
+            b = bdir / rel
+            b.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dst, b)
+    for rel, (n, dst) in files.items():
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dst.with_name(dst.name + ".upd-tmp")
+        tmp.write_bytes(z.read(n))
+        os.replace(tmp, dst)
+    _upd["data"] = None
+    return {"ok": True, "from": old, "to": newv, "files": len(files), "backup": str(bdir)}
+
+
+def restart_soon():
+    """Relanza el servidor (ya con el código nuevo) y cierra este."""
+    def go():
+        time.sleep(0.8)
+        flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        subprocess.Popen([sys.executable, str(APP_DIR / "server.py"), "--no-window", "--wait-port"],
+                         cwd=str(APP_DIR), creationflags=flags, close_fds=True)
+        os._exit(0)
+    threading.Thread(target=go, daemon=True).start()
 
 
 # ---------------- lectura en voz alta (Piper local / voces de Edge en línea) ----------------
@@ -247,6 +347,13 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json({"error": "origen no permitido"}, 403)
         url = urlparse(self.path)
         q = parse_qs(url.query)
+        if url.path == "/api/update/check":
+            try:
+                return self._json(update_check(q.get("force", ["0"])[0] == "1"))
+            except Exception as e:
+                return self._json({"error": f"No pude consultar GitHub: {e}", "current": app_version()}, 502)
+        if url.path == "/api/update/version":
+            return self._json({"version": app_version()})
         if url.path == "/api/mirror":
             room = q.get("room", [""])[0]
             if not room:
@@ -329,6 +436,14 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json({"error": "origen no permitido"}, 403)
         url = urlparse(self.path)
         q = parse_qs(url.query)
+        if url.path == "/api/update/apply":
+            try:
+                res = update_apply()
+            except Exception as e:
+                return self._json({"error": str(e)}, 400)
+            self._json(res)
+            restart_soon()
+            return
         if url.path == "/api/tts":
             n = int(self.headers.get("Content-Length", "0"))
             try:
@@ -526,6 +641,13 @@ def main():
     if venv.exists() and Path(sys.executable).resolve() != venv.resolve() and not os.environ.get("TRELBY_NO_VENV"):
         os.environ["TRELBY_NO_VENV"] = "1"
         sys.exit(subprocess.call([str(venv), str(Path(__file__).resolve()), *sys.argv[1:]]))
+    if "--wait-port" in sys.argv:  # relanzado tras actualizar: esperar a que se libere el puerto
+        for _ in range(60):
+            if not port_busy():
+                break
+            time.sleep(0.2)
+        else:
+            return
     if port_busy():  # ya está abierto: solo otra ventana
         open_window()
         return

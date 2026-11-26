@@ -34,6 +34,31 @@ Los guiones se guardan en `Documentos\Guiones`, fuera de la carpeta del programa
 
 Las voces de lectura local (Piper, archivos `.onnx`) no están en el repositorio porque pesan mucho. Van en la carpeta `voces\`.
 
+## Actualizaciones
+
+Al abrir, Scripting consulta la última versión publicada en este repositorio (sección *Releases*). Si hay una más nueva, aparece abajo a la izquierda el aviso **⬆ Actualizar a X**. También se puede buscar a mano con ☰ › *Buscar actualizaciones*.
+
+Al actualizar:
+
+1. Se descarga el código de esa versión desde GitHub.
+2. Se guarda una copia de lo que se reemplaza en `.actualizaciones\`.
+3. Se instalan los archivos nuevos.
+4. La app se recarga sola.
+
+No se tocan los guiones, las voces ni la configuración.
+
+Una copia que tenga carpeta `.git` (la de desarrollo) no se actualiza sola: se actualiza con `git pull`.
+
+### Cómo publicar una versión
+
+1. Cambiar el número en el archivo `VERSION`, por ejemplo `1.1.0`, y subirlo con commit y push.
+2. En GitHub, entrar a *Releases* › *Draft a new release*.
+3. En *Choose a tag*, escribir **el mismo número con una `v` adelante**, por ejemplo `v1.1.0`, y elegir *Create new tag*.
+4. Poner un título y, en la descripción, las novedades: es lo que se muestra en el aviso.
+5. Tocar *Publish release*.
+
+Si el número de `VERSION` no coincide con la etiqueta, la app no instala la actualización.
+
 ## Licencia
 
 Todos los derechos reservados. Ver [LICENSE](LICENSE).

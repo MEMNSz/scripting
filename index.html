@@ -951,6 +951,9 @@ body.novel #doc del.sg{text-decoration:line-through 2px var(--sgc);color:color-m
 body.novel .schip{display:inline-block}
 .schip.on{border-color:var(--accent);color:var(--accent)}
 #sSug.on{border-color:#e0a84f;color:#e0a84f}
+#updChip{display:inline-block;border-color:#4caf7d;color:#4caf7d;cursor:pointer}
+#updChip:hover{background:color-mix(in srgb,#4caf7d 15%,transparent)}
+#askSub{white-space:pre-line}
 ::highlight(stRep){background-color:rgba(224,168,79,.28)}
 ::highlight(stAdv){background-color:rgba(90,169,255,.25)}
 ::highlight(stLong){text-decoration:underline wavy rgba(224,108,117,.7)}
@@ -1058,6 +1061,7 @@ body.novel .pnum{top:auto;bottom:48px;right:0;left:0;text-align:center;font:13px
     <div class="sep"></div>
     <div class="mi"><span class="ic"><svg class="ti" viewBox="0 0 24 24"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span>Ajustes<span class="ar">›</span>
       <div class="sub"><div data-cmd="autosave">Autoguardado…<kbd id="kAuto"></kbd></div><div data-cmd="sheet">Hoja clara / oscura</div><div data-cmd="glass">Transparencia de la ventana<kbd id="kGlass"></kbd></div><div data-cmd="keys">Atajos de teclado</div><div data-cmd="folder">Carpeta de guiones</div></div></div>
+    <div class="mi" data-cmd="update"><span class="ic"><svg class="ti" viewBox="0 0 24 24"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg></span>Buscar actualizaciones</div>
     <div class="mi" data-cmd="help"><span class="ic"><svg class="ti" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 16v.01"/><path d="M12 13a2 2 0 0 0 .914 -3.782a1.98 1.98 0 0 0 -2.414 .483"/></svg></span>Ayuda</div>
     </div>
   </div>
@@ -2478,6 +2482,29 @@ $("sexpSet").addEventListener("change",e=>{const el=e.target.closest("[data-sk]"
 $("sexpSet").addEventListener("click",e=>{if(e.target.id!=="sexpReset")return;brecord();delete EXPO.scr;bchanged();drawSX();toast("Ajustes de exportar de fábrica")});
 $("sexpS").addEventListener("click",()=>{const P=$("sexpSet"),on=P.hidden;P.hidden=!on;$("sexpS").classList.toggle("on",on);if(on)drawSX()});
 window.scrExportTest={buildDoc,buildFDX,scrX};
+// ---- actualizaciones: el servidor consulta los Releases de GitHub ----
+(()=>{if(!/^(127\.0\.0\.1|localhost)$/.test(location.hostname)||!location.port)return;
+let info=null,busy=false;
+async function check(force){try{const r=await fetch("/api/update/check"+(force?"?force=1":""));const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);info=j;chip();return j}
+  catch(e){if(force)toast("No pude buscar actualizaciones: "+e.message);return null}}
+function chip(){let c=$("updChip");if(!info?.newer||info.dev){c?.remove();return}
+  if(!c){c=document.createElement("span");c.id="updChip";c.className="schip";c.title="Hay una versión nueva de Scripting";c.onclick=()=>run();$("sSug")?.before(c)}
+  c.textContent=`⬆ Actualizar a ${info.latest}`}
+async function run(){if(busy||!info?.newer)return;
+  const notes=(info.notes||"").replace(/\r/g,"").trim();
+  const ok=await window.uiConfirm(`Tenés la ${info.current}. ${notes?"Novedades:\n"+notes.slice(0,600)+(notes.length>600?"…":"")+"\n\n":""}Se guarda una copia de la versión actual y la app se recarga. Tus guiones no se tocan.`,{title:`¿Actualizar Scripting a ${info.latest}?`,okText:"Actualizar"});
+  if(!ok)return;busy=true;toast("Descargando la actualización…");
+  try{const r=await fetch("/api/update/apply",{method:"POST",headers:{"X-Trelby":"1"}});const j=await r.json();if(!r.ok)throw new Error(j.error||r.status);
+    toast(`Instalando ${j.to}…`);const t0=Date.now();
+    for(;;){await new Promise(z=>setTimeout(z,700));if(Date.now()-t0>30000)throw new Error("el servidor no volvió; cerrá y abrí Scripting");
+      try{const v=await (await fetch("/api/update/version",{cache:"no-store"})).json();if(v.version===j.to)break}catch{}}
+    location.reload()}
+  catch(e){busy=false;toast("No se pudo actualizar: "+e.message)}}
+CMD.update=async()=>{const j=await check(true);if(!j)return;
+  if(j.dev)toast(`Versión ${j.current} · esta es la copia de desarrollo: se actualiza con git`);
+  else if(j.newer)run();else toast(j.tag?`Tenés la última versión (${j.current})`:`Versión ${j.current} · todavía no hay versiones publicadas`)};
+setTimeout(()=>check(false),4000);setInterval(()=>check(false),6*3600e3);
+})();
 // Esc cierra los carteles de exportar (guion y novela)
 document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;for(const id of ["expModal","nexpModal"]){const m=$(id);if(m?.classList.contains("show")&&!$("askModal").classList.contains("show")){m.classList.remove("show");e.preventDefault()}}});
 window.openScrExp=()=>{if(!$("sexpSet").hidden)drawSX();expModal.classList.add("show")};
