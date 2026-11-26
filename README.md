@@ -114,4 +114,4 @@ Consultá [LICENSE](LICENSE) para más información.
 
 ---
 
-*Un proyecto independiente, desarrollado por MEMNSz con curiosidad, café y cantidades irresponsables de vibe coding.*
+*Un proyecto independiente, desarrollado por Claude y el vibe coding.*
