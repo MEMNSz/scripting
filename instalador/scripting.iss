@@ -37,7 +37,7 @@ Name: "escritorio"; Description: "Crear un acceso directo en el escritorio"; Gro
 [Files]
 ; el programa (lo mismo que está en GitHub; las actualizaciones reemplazan estos archivos)
 Source: "{#RepoDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; \
-  Excludes: ".git,.gitignore,.venv,*.bak*,__pycache__,.actualizaciones,*.upd-tmp,voces\*,instalador,sync\node_modules,sync\.wrangler,sync\.dev.vars*,ventana\obj,ventana\bin,ventana\out,ventana\scripting"
+  Excludes: ".git,.gitignore,DESARROLLO.md,Trelby.bat,.venv,*.bak*,__pycache__,.actualizaciones,*.upd-tmp,voces\*,instalador,sync\node_modules,sync\.wrangler,sync\.dev.vars*,ventana\obj,ventana\bin,ventana\out,ventana\scripting"
 ; la ventana translúcida (necesita .NET 8 Escritorio; si no está, Scripting.pyw abre Edge)
 Source: "{#BuildDir}\exe\*"; DestDir: "{app}\ventana\scripting"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "*.pdb,*.xml"
 ; Python con las librerías de lectura en voz alta

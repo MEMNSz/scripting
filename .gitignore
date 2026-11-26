@@ -25,3 +25,6 @@ voces/*.onnx.json
 .actualizaciones/
 *.upd-tmp
 voces/*.part
+
+# Lanzador con el nombre viejo (solo local)
+Trelby.bat

@@ -1,4 +1,4 @@
-"""Servidor local de Trelby (editor HTML).
+"""Servidor local de Scripting (editor de guiones y novelas).
 
 Liviano, solo librería estándar. Escucha únicamente en 127.0.0.1, sirve la
 interfaz y lee/escribe guiones .fountain dentro de Documents\\Guiones.
