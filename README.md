@@ -15,6 +15,7 @@ Integra herramientas de escritura, planificación narrativa, construcción de mu
 Dos entornos de escritura adaptados a las necesidades de cada formato.
 
 ### Guion cinematográfico
+<img width="1579" height="933" alt="imagen" src="https://github.com/user-attachments/assets/27b1c2da-ac81-4a7c-af91-a9625e43d9d3" />
 
 - Formato de guion al estilo de Final Draft.
 - Paginación automática.
@@ -23,6 +24,7 @@ Dos entornos de escritura adaptados a las necesidades de cada formato.
 - Estadísticas e informes de personajes, diálogos y locaciones.
 
 ### Novela
+<img width="1573" height="928" alt="imagen" src="https://github.com/user-attachments/assets/0a6aa872-c7b8-4c62-9308-a77349634027" />
 
 - Organización por capítulos y escenas.
 - Gestión de puntos de vista.
@@ -50,6 +52,7 @@ Visualizá y escuchá tu historia antes de llevarla a producción.
 - Síntesis de voz en línea mediante Edge y sin conexión mediante Piper.
 
 ## Escribí en compañía
+<img width="724" height="452" alt="imagen" src="https://github.com/user-attachments/assets/80515794-4aef-4f7c-b2d8-2d300bc31b7a" />
 
 Colaboración en tiempo real sin renunciar al control sobre tus proyectos.
 
@@ -59,6 +62,8 @@ Colaboración en tiempo real sin renunciar al control sobre tus proyectos.
 - Comentarios y sugerencias.
 - Historial y comparación de versiones.
 - Infraestructura colaborativa desplegable en tu propia cuenta de Cloudflare.
+
+<img width="1580" height="838" alt="imagen" src="https://github.com/user-attachments/assets/7b8dbc61-1466-4ce5-9d2a-74890ba4febb" />
 
 ## Tus historias, tus archivos
 
