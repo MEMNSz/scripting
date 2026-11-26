@@ -28,6 +28,7 @@ Dos entornos de escritura adaptados a las necesidades de cada formato.
 <img width="1573" height="928" alt="imagen" src="https://github.com/user-attachments/assets/0a6aa872-c7b8-4c62-9308-a77349634027" />
 
 - Organización por capítulos y escenas.
+<img width="1280" height="641" alt="imagen" src="https://github.com/user-attachments/assets/656471de-6a6c-4b5c-ab19-1f4dad981c70" />
 - Gestión de puntos de vista.
 - Objetivos diarios de escritura.
 - Revisión de estilo y modo de sugerencias.
@@ -38,9 +39,13 @@ Dos entornos de escritura adaptados a las necesidades de cada formato.
 Desarrollá la estructura de tu historia antes, durante y después de escribirla.
 
 - **Story Map:** visualización de la estructura narrativa sobre las páginas del manuscrito.
+<img width="1574" height="182" alt="imagen" src="https://github.com/user-attachments/assets/3f749413-e830-4bf3-93b5-7b1932e8c6c2" />
 - **Beat Board:** tableros de tarjetas, conexiones y acontecimientos narrativos.
+<img width="1057" height="520" alt="imagen" src="https://github.com/user-attachments/assets/c4946d6f-390c-497f-a7d3-ab41dae64c13" />
 - **Plantillas narrativas:** estructuras predefinidas para organizar historias.
+<img width="665" height="338" alt="imagen" src="https://github.com/user-attachments/assets/6d83c672-8da4-4345-8d80-601d65738c6f" />
 - **Biblia narrativa:** documentación de personajes, lugares, temas y universos ficticios.
+<img width="1582" height="937" alt="imagen" src="https://github.com/user-attachments/assets/41f3d25b-5e1d-4a75-b8f6-9bc60c5364b9" />
 
 ## Del guion a la pantalla
 
