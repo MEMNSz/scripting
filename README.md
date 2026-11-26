@@ -1,47 +1,110 @@
-
-#VIBECODEADO XD
-
 # Scripting
 
-Editor de guiones y novelas para Windows.
+**Un espacio de trabajo para contar historias.**
 
-**[⬇ Descargar la última versión](https://github.com/MEMNSz/scripting/releases/latest)**
+Scripting es un entorno de escritura y desarrollo narrativo para Windows, diseñado para guionistas, novelistas y creadores de historias.
 
-## Qué hace
+Integra herramientas de escritura, planificación narrativa, construcción de mundos, preproducción audiovisual y edición colaborativa en una única aplicación.
 
-- **Guion** con formato estilo Final Draft: escena, acción, personaje, paréntesis, diálogo y transición, con Enter y Tab como en Final Draft, y autocompletado de personajes y escenas.
-- **Story Map y Beat Board**: beats sobre las páginas, tableros de tarjetas, plantillas de estructura y líneas de flujo.
-- **Biblia**: fichas de personajes, lugares y temas, con formato e imágenes.
-- **Storyboard**: cuadros por escena con plano, movimiento, imagen y descripción.
-- **Modo novela**: capítulos y escenas con estado y punto de vista, metas de palabras, modo sugerencia y revisión de estilo.
-- **Lectura en voz alta**, con una voz por personaje.
-- **Colaboración en vivo**: salas online para escribir con otros al mismo tiempo, con versiones e historial.
-- **Exportar**:
-  - guion: PDF, Final Draft (.fdx), Fountain y Word
-  - novela: Word (.docx), PDF de libro, PDF manuscrito y EPUB
-  - en los dos casos, con ajustes de hoja, márgenes, numeración y más
+**[Descargar para Windows](https://github.com/MEMNSz/scripting/releases/latest)**
+
+---
+
+## Escritura sin interrupciones
+
+Dos entornos de escritura adaptados a las necesidades de cada formato.
+
+### Guion cinematográfico
+
+- Formato de guion al estilo de Final Draft.
+- Paginación automática.
+- Autocompletado de personajes y encabezados de escena.
+- Navegación inteligente por escenas.
+- Estadísticas e informes de personajes, diálogos y locaciones.
+
+### Novela
+
+- Organización por capítulos y escenas.
+- Gestión de puntos de vista.
+- Objetivos diarios de escritura.
+- Revisión de estilo y modo de sugerencias.
+- Corrector ortográfico de español argentino.
+
+## Arquitectura narrativa
+
+Desarrollá la estructura de tu historia antes, durante y después de escribirla.
+
+- **Story Map:** visualización de la estructura narrativa sobre las páginas del manuscrito.
+- **Beat Board:** tableros de tarjetas, conexiones y acontecimientos narrativos.
+- **Plantillas narrativas:** estructuras predefinidas para organizar historias.
+- **Biblia narrativa:** documentación de personajes, lugares, temas y universos ficticios.
+
+## Del guion a la pantalla
+
+Visualizá y escuchá tu historia antes de llevarla a producción.
+
+- Storyboard integrado por escenas.
+- Composición de planos y movimientos de cámara.
+- Referencias visuales.
+- Lectura dramatizada con voces individuales para cada personaje.
+- Síntesis de voz en línea mediante Edge y sin conexión mediante Piper.
+
+## Escribí en compañía
+
+Colaboración en tiempo real sin renunciar al control sobre tus proyectos.
+
+- Edición simultánea de documentos.
+- Salas privadas de escritura.
+- Gestión de usuarios e invitaciones.
+- Comentarios y sugerencias.
+- Historial y comparación de versiones.
+- Infraestructura colaborativa desplegable en tu propia cuenta de Cloudflare.
+
+## Tus historias, tus archivos
+
+Scripting prioriza el almacenamiento local. Podés escribir sin conexión a internet, conservar tus manuscritos en tu computadora y utilizar las funciones colaborativas cuando las necesites.
+
+No necesitás depender de una plataforma centralizada para escribir.
+
+## Exportación y publicación
+
+| Formato | Guion | Novela |
+|---|---|---|
+| PDF | Sí | Sí |
+| Final Draft (.fdx) | Sí | — |
+| Fountain | Sí | — |
+| Word | Sí | Sí |
+| EPUB | — | Sí |
+
+Configuración de márgenes, dimensiones de página, numeración y presentación del documento.
+
+## Tecnología
+
+Scripting está construido sobre una arquitectura ligera que combina tecnologías web con servicios locales y sincronización distribuida.
+
+- HTML, CSS y JavaScript.
+- Python.
+- Yjs y CRDT.
+- WebSockets.
+- Cloudflare Workers y Durable Objects.
+- Piper y Edge TTS.
 
 ## Instalación
 
-1. Bajá `Scripting-…-instalador.exe` desde **[Releases](https://github.com/MEMNSz/scripting/releases/latest)**.
-2. Abrilo. Si Windows muestra *"Windows protegió tu PC"*, tocá **Más información › Ejecutar de todas formas** (el instalador no está firmado).
-3. Seguí los pasos. No pide permisos de administrador ni hace falta instalar nada más.
+Compatible con Windows 10 y Windows 11.
 
-Funciona en Windows 10 y 11. Si la PC tiene .NET 8, se abre en su ventana propia; si no, en una ventana de Edge.
+Descargá el instalador desde la sección de [versiones](https://github.com/MEMNSz/scripting/releases/latest).
 
-## Dónde quedan tus cosas
+La aplicación dispone de actualizaciones integradas y no requiere permisos de administrador para su instalación.
 
-Los guiones se guardan en `Documentos\Guiones`. Actualizar o desinstalar Scripting no los toca.
-
-## Actualizaciones
-
-Cuando hay una versión nueva, aparece abajo a la izquierda **⬆ Actualizar a …**. Con un clic se descarga, se instala y la app se recarga. También se puede buscar a mano con ☰ › *Buscar actualizaciones*.
-
-## Voces
-
-- **Edge (en línea)**: funcionan apenas instalás. El texto se manda a Microsoft para generar el audio.
-- **Piper (sin internet)**: se bajan desde la app, en el panel de voces del reparto, y todo se genera en tu PC.
+El instalador no cuenta actualmente con firma digital.
 
 ## Licencia
 
-Todos los derechos reservados. Ver [LICENSE](LICENSE).
+Código fuente disponible para consulta. Todos los derechos reservados.
+
+Consultá [LICENSE](LICENSE) para más información.
+
+---
+
+*Un proyecto independiente, desarrollado por MEMNSz con curiosidad, café y cantidades irresponsables de vibe coding.*
