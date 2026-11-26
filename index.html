@@ -1275,15 +1275,20 @@ beats.push({id:99,t:"Idea suelta",lane:0,s:0,l:0,c:"c5",body:"Tarjeta solo en el
 let links = [[3,4],[4,5],[5,6],[6,7]];
 
 const pct = p => ((p-1)/PAGES*100)+"%";
+// beat anclado a texto (b.a = párrafo inicial, b.z = final): se dibuja donde está ese texto; si no, por página
+const bspan = b => (b.a&&window.ED?.beatSpan?.(b))||{s:b.s,l:b.l};
+const btip = b => b.a?`${b.t} · anclado a «${b.a.x}»`:`${b.t} · ${pp(b)}`;
+function placeAnchored(){
+  for(const el of map.querySelectorAll(".beat.anc")){const b=beats.find(x=>x.id==el.dataset.id);if(!b)continue;const r=bspan(b);
+    el.style.left=pct(r.s);el.style.width=`calc(${r.l/PAGES*100}% - 2px)`;el.title=btip(b)}}
 function drawMap(){
-  const lane = n => beats.filter(b=>b.lane===n).map(b=>
-    `<div class="beat" data-id="${b.id}" title="${escH(b.t)} · ${pp(b)}" style="left:${pct(b.s)};width:calc(${b.l/PAGES*100}% - 2px);border-color:var(--${b.c})">${escH(b.t)}</div>`).join("");
+  const lane = n => beats.filter(b=>b.lane===n).map(b=>{const r=bspan(b);return `<div class="beat${b.a?" anc":""}" data-id="${b.id}" title="${escH(btip(b))}" style="left:${pct(r.s)};width:calc(${r.l/PAGES*100}% - 2px);border-color:var(--${b.c})">${b.a?"⚑ ":""}${escH(b.t)}</div>`}).join("");
   map.innerHTML = `<span class="lbl">OUTLINE 1</span><div class="lane">${lane(1)}</div>
   <span class="lbl">OUTLINE 2</span><div class="lane">${lane(2)}</div><span></span>
   <div class="ruler">${[1,15,30,45,60,75,90,105].map(p=>`<i style="left:${pct(p)}">${p}</i>`).join("")}<i style="right:0">${PAGES}</i></div>
   <span class="lbl">RITMO</span><div class="pace" id="paceLane"></div>
   <span class="lbl">SCRIPT</span><div class="lane" id="scriptLane"></div>`;
-  if(window.ED)ED.drawLanes();
+  if(window.ED)ED.drawLanes();   // también reubica los beats anclados
 }
 function drawBoard(){
   const pos = {}; let row1=0,row2=0,row3=0;
@@ -1422,6 +1427,7 @@ beatModal.addEventListener("keydown",e=>{if(e.key==="Escape")closeBeat();if(e.ke
 let mdrag=null,justDragged=false;
 map.addEventListener("pointerdown",e=>{const el=e.target.closest(".beat");if(!el)return;e.preventDefault();
   const b=beats.find(x=>x.id==el.dataset.id),r=el.getBoundingClientRect(),lane=el.parentNode.getBoundingClientRect();
+  if(b?.a)return;   // anclado: lo mueve el texto, no el mouse
   const mode=e.clientX-r.left<7?"l":r.right-e.clientX<7?"r":"m";
   mdrag={el,b,mode,x0:e.clientX,s0:b.s,l0:b.l,ppx:PAGES/lane.width,moved:false};el.setPointerCapture(e.pointerId);el.classList.add("lifting");window.mapTop=String(b.id)});
 map.addEventListener("pointermove",e=>{
@@ -1457,16 +1463,23 @@ playB.onclick=()=>{if(rT)return stopRead();player.classList.add("playing");playB
     document.querySelectorAll(".voice").forEach(v=>v.classList.toggle("on",v.dataset.v===who(p)))};step();rT=setInterval(step,1600)};
 // modo foco
 focusBtn.onclick=()=>document.body.classList.toggle("focus");
+// ir al texto de un beat; si el guion todavía no llega a esa página, avisa en vez de tirar a la última línea
+function goBeat(b){
+  if(b.a){const el=ED.findRef?.(b.a);if(el){document.querySelector('[data-v=script]').click();ED.gotoBlock(el);return}
+    toast(`No encuentro el texto anclado de «${b.t}»: voy por página`)}
+  const n=ED.pages?.()||1;
+  if(b.s>n){toast(`«${b.t}» está en la pág. ${b.s} y el guion llega a la ${n}: todavía no tiene texto`);return}
+  document.querySelector('[data-v=script]').click();ED.gotoPage(b.s)}
 // popover al hacer clic en un beat de la barra
 map.onclick=e=>{
   if(justDragged)return;
   const el=e.target.closest(".beat"); if(!el){pop.style.display="none";return}
   const b=beats.find(x=>x.id==el.dataset.id), r=el.getBoundingClientRect();
   pop.innerHTML=`<h4 style="border-left:3px solid var(--${b.c});padding-left:8px">${escH(b.t)}</h4>
-    <small>${pp(b)} · ${b.l} pág. · Outline ${b.lane}</small><p>${escH(b.body)||"Sin descripción"}</p>
+    <small>${b.a?`⚑ Anclado a «${escH(b.a.x)}»`:`${pp(b)} · ${b.l} pág.`} · Outline ${b.lane}</small><p>${escH(b.body)||"Sin descripción"}</p>
     <div class="row"><button class="btn" data-p="go">Ir al guion</button><button class="btn" data-p="board">Ver en tablero</button><button class="btn" data-p="edit">Editar</button></div>`;
   pop.onclick=ev=>{const a=ev.target.dataset.p;if(!a)return;pop.style.display="none";
-    if(a==="go"){document.querySelector('[data-v=script]').click();ED.gotoPage(b.s)}
+    if(a==="go")goBeat(b);
     if(a==="edit")openBeat(b);
     if(a==="board"){document.querySelector('[data-v=board]').click();const c=cards.querySelector(`[data-id="${b.id}"]`);
       if(c){c.scrollIntoView({block:"center",inline:"center",behavior:"smooth"});c.classList.add("flash");setTimeout(()=>c.classList.remove("flash"),1400)}}};
@@ -1645,7 +1658,30 @@ function drawLanes(){
   const c=caret();
   sl.innerHTML=data.scenes.map(s=>`<div class="scene" title="${esc(s.text)}" style="left:${pct(pageFloat(s.b))};background:var(${s.ext?"--ext":"--int"})"></div>`).join("")+
     `<div class="cursor" style="left:${pct(pageFloat(c?.b))}"></div>`+(nPages>PAGES?`<div class="over" style="width:${(nPages-PAGES)/nPages*100}%"></div>`:"");
+  window.placeAnchored?.();
 }
+// anclas de beats: {id del párrafo, i = posición entre los párrafos con texto, x = comienzo del texto}
+// el id no sobrevive al reabrir un guion (Fountain no lo guarda), por eso se busca también por posición y texto
+function refOf(b){if(!b.dataset.id)ser();const full=blocks().filter(x=>x.textContent.trim());return {id:b.dataset.id,i:full.indexOf(b),x:b.textContent.trim().slice(0,40)}}
+function findRef(r){
+  if(!r)return null;const bs=blocks(),full=bs.filter(x=>x.textContent.trim()),ok=x=>x&&r.x&&x.textContent.trim().startsWith(r.x);
+  let b=r.id&&bs.find(x=>x.dataset.id===r.id)||null;
+  if(!b&&ok(full[r.i]))b=full[r.i];
+  if(!b){let bd=1e9;full.forEach((x,k)=>{if(ok(x)&&Math.abs(k-r.i)<bd){bd=Math.abs(k-r.i);b=x}})}
+  if(b){if(!b.dataset.id)ser();const t=b.textContent.trim();r.id=b.dataset.id;if(t){r.i=full.indexOf(b);r.x=t.slice(0,40)}}   // se mantiene al día mientras se edita
+  return b}
+// sin final elegido, el beat llega hasta el próximo beat anclado de su carril (o hasta el final del texto)
+function beatSpan(bt){const s=findRef(bt.a);if(!s)return null;const p=pageFloat(s);let q;
+  const e=bt.z&&findRef(bt.z);
+  if(e&&e.offsetTop>=s.offsetTop)q=pageFloat(e)+Math.max(16,e.offsetHeight)/(PH+GAP);
+  else{const nx=beats.filter(x=>x!==bt&&x.lane===bt.lane&&x.a).map(x=>findRef(x.a)).filter(x=>x&&x.offsetTop>s.offsetTop).sort((a,b)=>a.offsetTop-b.offsetTop)[0];
+    const last=blocks().at(-1);q=nx?pageFloat(nx):pageFloat(last)+Math.max(16,last.offsetHeight)/(PH+GAP)}
+  return {s:p,l:Math.max(.1,q-p)}}
+// párrafos con texto que abarca la selección (primero y último)
+function selBlocks(){const s=getSelection();if(!s.rangeCount)return null;const top=n=>{while(n&&n.parentNode!==doc)n=n.parentNode;return n};
+  const rg=s.getRangeAt(0),bs=blocks();let i=bs.indexOf(top(rg.startContainer)),j=bs.indexOf(top(rg.endContainer));if(i<0||j<0)return null;
+  if(j>i){const t=document.createRange();t.setStart(bs[j],0);t.setEnd(rg.endContainer,rg.endOffset);if(!t.toString())j--}   // el triple clic "toca" el párrafo siguiente sin tomar letras
+  const r=bs.slice(i,j+1).filter(x=>x.textContent.trim());return r.length?[r[0],r.at(-1)]:null}
 $("navScenes").addEventListener("mousedown",e=>{const s=e.target.closest(".sc");if(!s)return;e.preventDefault();const b=blocks()[+s.dataset.i];if(b){place(b,b.textContent.length);b.scrollIntoView({block:"start",behavior:"smooth"})}});
 $("navFilter").addEventListener("input",()=>drawNav(data));
 
@@ -1815,7 +1851,8 @@ function enter(){
   const {b,o}=c,x=b.textContent;
   if(KIND!=="novel"&&b.dataset.t==="action"&&/^(int|ext|est|int\.?\/ext|i\/e)[. ]/i.test(x))b.dataset.t="scene";
   if(!x&&b.dataset.t!=="action"){b.dataset.t="action";changed();place(b,0);return}
-  if(!x)return;
+  if(!x){if(KIND!=="novel")return;   // en novela Enter en párrafo vacío deja una línea en blanco
+    const n=mk("action");b.after(n);changed();place(n,0);return}
   let n;
   if(o>=x.length)n=mk(NEXT[b.dataset.t]);
   else{n=mk(b.dataset.t,x.slice(o));setText(b,x.slice(0,o))}
@@ -2061,10 +2098,11 @@ function pickKind(){return new Promise(res=>{const M=$("kindModal");let k=KIND;
   $("kOk").onclick=()=>done(true);$("kNo").onclick=()=>done(false);document.addEventListener("keydown",key,true);
   M.classList.add("show");setTimeout(()=>$("kName").focus(),60)})}
 function setName(n){fileName=n.replace(/\.(fountain|spmd|txt)$/i,"");$("fname").textContent=fileName;document.title=fileName+" – Scripting"}
-let newArmed=false;
-function newDoc(){
-  if(dirty&&!newArmed){newArmed=true;toast("Hay cambios sin guardar: tocá Nuevo otra vez para descartarlos");setTimeout(()=>newArmed=false,3000);return}
-  newArmed=false;pickKind().then(r=>{if(!r)return;
+let newArmed=false;   // evita abrir dos confirmaciones si se aprieta Ctrl+N de nuevo
+async function newDoc(){
+  if(newArmed)return;
+  if(dirty){newArmed=true;let ok;try{ok=await window.uiConfirm("Si seguís, los cambios que no guardaste se pierden.",{title:"¿Crear uno nuevo sin guardar?",okText:"Descartar y crear",danger:true})}finally{newArmed=false}if(!ok)return}
+  pickKind().then(r=>{if(!r)return;
     if(window.LIVE?.room)window.LIVE.leave();   // un proyecto nuevo no pisa la sala
     const nov=r.kind==="novel";record();fileHandle=null;srvFile=null;setName(r.name||"Sin título");
     load(nov?[["scene","Capítulo 1"],["action",""]]:[["scene",""]]);loadBoards({...EMPTY_ST,kind:r.kind});comments={};editingCm.clear();changed();setDirty(false);place(blocks()[nov?1:0],0)});
@@ -2224,6 +2262,8 @@ window.ED={blocks,drawLanes,relayout:()=>{layout();refreshUI()},
   record:()=>{typing=false;record()},
   beatsChanged:()=>{setDirty(true);autosave()},
   curPage:()=>{const c=caret();return c?Math.floor(pageFloat(c.b)):1},
+  pages:()=>nPages,findRef,beatSpan,
+  gotoBlock:b=>setTimeout(()=>{place(b,0);b.scrollIntoView({block:"center",behavior:"smooth"})},60),
   gotoPage:p=>{const bs=blocks();const b=bs.find(x=>pageFloat(x)>=p)||bs.at(-1);setTimeout(()=>{place(b,0);b.scrollIntoView({block:"center",behavior:"smooth"})},60)},
   parseFountain,fileText,openText,versions:loadVersions};
 window.ED.live={ser,caret,place,mk,setText,blocks,isDirty:()=>dirty,changed:()=>changed(),
@@ -2663,16 +2703,23 @@ function docItems(){
     "-",
     {ic:ICON[cur]||"¶",label:"Tipo de elemento",sub:TYPES.map((t,i)=>({ic:ICON[t],label:LABEL[t],kbd:"Ctrl+"+(i+1),on:t===cur,act:()=>c&&setType(c.b,t)}))},
     {ic:"💬",label:c?.b.dataset.cm?"Ver comentario":"Comentar este bloque",kbd:"Ctrl+Alt+M",dis:!c,act:addComment},
+    anchorItem(),
     {ic:"◆",label:"Beat en esta página",sub:[{label:"Outline 1 (acto)",act:()=>newBeatHere(1)},{label:"Outline 2 (momento)",act:()=>newBeatHere(2)},{label:"Solo en el tablero",act:()=>newBeatHere(0)}]},
     "-",...undoItems(),
     "-",{ic:"▣",label:"Seleccionar todo",kbd:"Ctrl+A",act:()=>{doc.focus();document.execCommand("selectAll")}},
   ];
 }
+// "Asignar a beat": ancla el beat al texto seleccionado (o al párrafo del cursor)
+function anchorItem(){
+  const r=selBlocks(),list=beats.filter(b=>b.lane).sort((a,b)=>a.lane-b.lane||a.s-b.s);
+  return {ic:"⚑",label:"Asignar a beat",dis:!r||!list.length,sub:list.map(b=>({label:`${b.lane===1?"Acto":"Momento"} · ${b.t}`,on:!!b.a,
+    act:()=>{brecord();b.a=refOf(r[0]);b.z=r[1]!==r[0]?refOf(r[1]):null;beatsDone();toast(`«${b.t}» anclado a este texto`)}}))}}
 function beatItems(b,onMap){
   if(!b)return generalItems();
   return [
     {ic:"✎",label:"Editar…",act:()=>openBeat(b)},
-    {ic:"↪",label:"Ir al guion",dis:!b.lane,act:()=>{view("script");ED.gotoPage(b.s)}},
+    {ic:"↪",label:"Ir al guion",dis:!b.lane,act:()=>goBeat(b)},
+    ...(b.a?[{ic:"⚐",label:"Quitar anclaje al texto",act:()=>{brecord();delete b.a;delete b.z;beatsDone();toast("Vuelve a ubicarse por página")}}]:[]),
     onMap?{ic:"▦",label:"Ver en el tablero",act:()=>{view("board");const c=cards.querySelector(`[data-id="${b.id}"]`);if(c){c.scrollIntoView({block:"center",inline:"center",behavior:"smooth"});c.classList.add("flash");setTimeout(()=>c.classList.remove("flash"),1400)}}}
           :{ic:"⤳",label:"Conectar desde acá",act:()=>{connMode=true;connFrom=b;connBtn.classList.add("on");cards.querySelector(`[data-id="${b.id}"]`)?.classList.add("pick");toast("Tocá la tarjeta de destino")}},
     "-",{label:"Color",swatches:true,pick:c=>{brecord();b.c=c;beatsDone()}},

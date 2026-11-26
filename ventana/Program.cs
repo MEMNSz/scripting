@@ -23,6 +23,8 @@ static class Program
     [StructLayout(LayoutKind.Sequential)] struct NCCALCSIZE_PARAMS { public RECT r0, r1, r2; public IntPtr pos; }
     [DllImport("user32.dll")] static extern int GetSystemMetrics(int i);
     [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint f);
+    [DllImport("user32.dll")] static extern int GetSystemMetricsForDpi(int i, uint dpi);
+    [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr h, int msg, IntPtr w, IntPtr l);
 
     static bool PortOpen()
     {
@@ -99,6 +101,24 @@ static class Program
             var m = new MARGINS { l = -1, r = -1, t = -1, b = -1 };
             DwmExtendFrameIntoClientArea(Handle, ref m);
             SetWindowPos(Handle, IntPtr.Zero, 0, 0, 0, 0, 0x0027); // SWP_FRAMECHANGED|NOMOVE|NOSIZE|NOZORDER
+            SetIcons(DeviceDpi);
+            DpiChanged += (s, ev) => SetIcons(ev.DeviceDpiNew);
+        }
+        // íconos de la barra y Alt+Tab al tamaño justo del DPI (si no, Windows estira uno de 32 px y se ve pixelado)
+        Icon _icoBig, _icoSmall;
+        void SetIcons(int dpi)
+        {
+            try
+            {
+                var exe = Application.ExecutablePath;
+                var b = Icon.ExtractIcon(exe, 0, GetSystemMetricsForDpi(11, (uint)dpi));   // SM_CXICON
+                var s = Icon.ExtractIcon(exe, 0, GetSystemMetricsForDpi(49, (uint)dpi));   // SM_CXSMICON
+                if (b == null || s == null) return;
+                SendMessage(Handle, 0x80, (IntPtr)1, b.Handle);   // WM_SETICON, ICON_BIG
+                SendMessage(Handle, 0x80, IntPtr.Zero, s.Handle); // ICON_SMALL
+                _icoBig?.Dispose(); _icoSmall?.Dispose(); _icoBig = b; _icoSmall = s;
+            }
+            catch { }
         }
         async System.Threading.Tasks.Task Init()
         {
