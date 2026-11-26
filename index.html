@@ -58,6 +58,18 @@ button{font:inherit;color:inherit}
 .ruler i{position:absolute;font-style:normal}
 .scene{position:absolute;top:4px;bottom:4px;width:6px;border-radius:2px}
 .cursor{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--accent)}
+/* franjas de beats en el margen del texto (no se imprimen ni se exportan) */
+#bmarks{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:1}
+.map .lane,.map .ruler,.map .pace{overflow:hidden}
+.mzoom{display:flex;gap:2px;align-items:center}
+.mzoom button{background:var(--lane);border:1px solid var(--line);color:var(--muted);border-radius:4px;font:11px/13px "Segoe UI",sans-serif;padding:0 5px;cursor:pointer}
+.mzoom button:hover{color:var(--text);border-color:var(--accent)}
+#sBeat{margin-left:auto;cursor:pointer;padding:0 8px;border-radius:999px;border:1px solid var(--line)}#sBeat:hover{border-color:var(--accent)}#sBeat[hidden]{display:none}#sBeat:not([hidden])+.goal{margin-left:0}   /* a la derecha: el centro del pie lo tapa la zona del dock */
+#bmarks .bmb{position:absolute;width:3px;border-radius:2px;opacity:.5}
+#bmarks .bmb.l1{left:62px}#bmarks .bmb.l2{left:70px;opacity:.9}
+#bmarks .bml{position:absolute;left:0;width:58px;text-align:right;font:600 9px/11px "Segoe UI",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bmarks .bml.l1{transform:translateY(-12px);text-transform:uppercase;opacity:.75}
+@media print{#bmarks{display:none!important}}
 .over{position:absolute;top:0;bottom:0;right:0;width:4%;background:#e06b6b22;border-left:1px dashed #e06b6b}
 /* editor */
 .work{flex:1;background:var(--workspace);overflow:auto;display:flex;justify-content:center;padding:24px}
@@ -1104,7 +1116,7 @@ body.novel .pnum{top:auto;bottom:48px;right:0;left:0;text-align:center;font:13px
 
 <div class="foot">
   <span class="ok" id="sSave">● Guardado</span><span id="sSug" class="schip" title="Modo sugerencia: tus cambios quedan marcados para que otro los acepte o rechace">✎ Editando</span><span id="sStyle" class="schip" title="Revisión de estilo">Estilo</span><span id="sScenes"></span><span id="sMin"></span><span id="sWords"></span>
-  <span class="goal">Objetivo <span id="sTarget">120</span><span id="sUnit"> pp</span> <b><i id="sGoalBar"></i></b> <span id="sGoal"></span></span>
+  <span id="sBeat" title="Beat que estás escribiendo · clic para empezar otro acá" hidden>◆ Sin beat</span><span class="goal">Objetivo <span id="sTarget">120</span><span id="sUnit"> pp</span> <b><i id="sGoalBar"></i></b> <span id="sGoal"></span></span>
 </div>
 <input type="file" id="file" accept=".fountain,.spmd,.txt" hidden>
 
@@ -1274,18 +1286,34 @@ let beats = T["Tres actos"].map((b,i)=>({id:i,t:b[0],lane:b[1],s:b[2],l:b[3],c:b
 beats.push({id:99,t:"Idea suelta",lane:0,s:0,l:0,c:"c5",body:"Tarjeta solo en el tablero"});
 let links = [[3,4],[4,5],[5,6],[6,7]];
 
-const pct = p => ((p-1)/PAGES*100)+"%";
+// zoom de la barra: se ve la ventana de páginas [VW0, VW0+vS()); VWS=0 = todo el objetivo, como siempre
+let VW0=1,VWS=0;
+const vS = () => VWS||PAGES;
+const pct = p => ((p-VW0)/vS()*100)+"%";
+const pw = l => l/vS()*100;   // ancho en % de l páginas
+const fullS = () => Math.max(PAGES,(window.ED?.textEnd?.()||1)-1);
+function setView(v0,s){const F=fullS();s=Math.min(Math.max(s,.25),F);
+  if(s>=F-1e-6&&F===PAGES){VWS=0;VW0=1}else{VWS=s;VW0=Math.min(Math.max(1,v0),1+F-s)}
+  pop.style.display="none";drawMap()}
+function zoomAt(f,p){const S=vS(),fr=(p-VW0)/S,ns=S/f;setView(p-fr*ns,ns)}
+function zoomFit(){setView(1,Math.max(.25,((window.ED?.textEnd?.()||2)-1)*1.03))}
+function ticks(){const S=vS(),st=[.25,.5,1,2,5,10,15,30,60].find(x=>S/x<=9)||60,out=[],end=VW0+S-st*.6;
+  for(let p=Math.max(1,Math.ceil(VW0/st)*st);p<end;p+=st)out.push(+p.toFixed(2));if(VW0<=1&&out[0]!==1)out.unshift(1);return out}
 // beat anclado a texto (b.a = párrafo inicial, b.z = final): se dibuja donde está ese texto; si no, por página
 const bspan = b => (b.a&&window.ED?.beatSpan?.(b))||{s:b.s,l:b.l};
 const btip = b => b.a?`${b.t} · anclado a «${b.a.x}»`:`${b.t} · ${pp(b)}`;
+// con zoom, un beat que empieza antes del tramo visible corre su nombre hasta el borde
+const bcut = r => r.s<VW0?`box-sizing:border-box;padding-left:calc(${pw(VW0-r.s)}% + 6px);`:"";
 function placeAnchored(){
   for(const el of map.querySelectorAll(".beat.anc")){const b=beats.find(x=>x.id==el.dataset.id);if(!b)continue;const r=bspan(b);
-    el.style.left=pct(r.s);el.style.width=`calc(${r.l/PAGES*100}% - 2px)`;el.title=btip(b)}}
+    el.style.left=pct(r.s);el.style.width=`calc(${pw(r.l)}% - 2px)`;el.style.boxSizing=r.s<VW0?"border-box":"";el.style.paddingLeft=r.s<VW0?`calc(${pw(VW0-r.s)}% + 6px)`:"";el.title=btip(b)}}
 function drawMap(){
-  const lane = n => beats.filter(b=>b.lane===n).map(b=>{const r=bspan(b);return `<div class="beat${b.a?" anc":""}" data-id="${b.id}" title="${escH(btip(b))}" style="left:${pct(r.s)};width:calc(${r.l/PAGES*100}% - 2px);border-color:var(--${b.c})">${b.a?"⚑ ":""}${escH(b.t)}</div>`}).join("");
+  const lane = n => beats.filter(b=>b.lane===n).map(b=>{const r=bspan(b);return `<div class="beat${b.a?" anc":""}" data-id="${b.id}" title="${escH(btip(b))}" style="left:${pct(r.s)};width:calc(${pw(r.l)}% - 2px);${bcut(r)}border-color:var(--${b.c})">${b.a?"⚑ ":""}${escH(b.t)}</div>`}).join("");
+  const S=vS(),endLbl=VWS?+(VW0+S).toFixed(S<4?1:0):PAGES;   // con zoom: la página del borde derecho
   map.innerHTML = `<span class="lbl">OUTLINE 1</span><div class="lane">${lane(1)}</div>
-  <span class="lbl">OUTLINE 2</span><div class="lane">${lane(2)}</div><span></span>
-  <div class="ruler">${[1,15,30,45,60,75,90,105].map(p=>`<i style="left:${pct(p)}">${p}</i>`).join("")}<i style="right:0">${PAGES}</i></div>
+  <span class="lbl">OUTLINE 2</span><div class="lane">${lane(2)}</div>
+  <span class="mzoom"><button data-z="out" title="Alejar (Ctrl + rueda sobre la barra)">−</button><button data-z="in" title="Acercar (Ctrl + rueda sobre la barra)">+</button><button data-z="fit" title="Ajustar a lo escrito">⤢</button>${VWS?`<button data-z="all" title="Ver todo el objetivo">↺</button>`:""}</span>
+  <div class="ruler">${ticks().map(p=>`<i style="left:${pct(p)}">${p}</i>`).join("")}<i style="right:0">${endLbl}</i></div>
   <span class="lbl">RITMO</span><div class="pace" id="paceLane"></div>
   <span class="lbl">SCRIPT</span><div class="lane" id="scriptLane"></div>`;
   if(window.ED)ED.drawLanes();   // también reubica los beats anclados
@@ -1429,7 +1457,7 @@ map.addEventListener("pointerdown",e=>{const el=e.target.closest(".beat");if(!el
   const b=beats.find(x=>x.id==el.dataset.id),r=el.getBoundingClientRect(),lane=el.parentNode.getBoundingClientRect();
   if(b?.a)return;   // anclado: lo mueve el texto, no el mouse
   const mode=e.clientX-r.left<7?"l":r.right-e.clientX<7?"r":"m";
-  mdrag={el,b,mode,x0:e.clientX,s0:b.s,l0:b.l,ppx:PAGES/lane.width,moved:false};el.setPointerCapture(e.pointerId);el.classList.add("lifting");window.mapTop=String(b.id)});
+  mdrag={el,b,mode,x0:e.clientX,s0:b.s,l0:b.l,ppx:vS()/lane.width,moved:false};el.setPointerCapture(e.pointerId);el.classList.add("lifting");window.mapTop=String(b.id)});
 map.addEventListener("pointermove",e=>{
   const el=e.target.closest(".beat");
   if(!mdrag){if(el){const r=el.getBoundingClientRect();el.style.cursor=(e.clientX-r.left<7||r.right-e.clientX<7)?"ew-resize":"grab"}return}
@@ -1439,9 +1467,15 @@ map.addEventListener("pointermove",e=>{
   if(mdrag.mode==="m")b.s=Math.min(PAGES,Math.max(1,q(mdrag.s0+d)));
   else if(mdrag.mode==="r")b.l=Math.max(.125,q(mdrag.l0+d));
   else{const s=Math.min(mdrag.s0+mdrag.l0-.125,Math.max(1,q(mdrag.s0+d)));b.l=mdrag.l0+mdrag.s0-s;b.s=s}
-  mdrag.el.style.left=pct(b.s);mdrag.el.style.width=`calc(${b.l/PAGES*100}% - 2px)`;mdrag.el.title=pp(b);
+  mdrag.el.style.left=pct(b.s);mdrag.el.style.width=`calc(${pw(b.l)}% - 2px)`;mdrag.el.title=pp(b);
   toast(`${b.t}: ${pp(b)}`);
 });
+// zoom: botones −/+/⤢/↺, Ctrl+rueda acerca o aleja donde está el mouse, la rueda sola desplaza cuando hay zoom
+map.addEventListener("click",e=>{const z=e.target.closest(".mzoom button");if(!z)return;const c=VW0+vS()/2;
+  ({in:()=>zoomAt(2,c),out:()=>zoomAt(.5,c),fit:zoomFit,all:()=>{VWS=0;VW0=1;setView(1,fullS())}})[z.dataset.z]?.()});
+map.addEventListener("wheel",e=>{const ln=map.querySelector(".lane");if(!ln)return;
+  if(e.ctrlKey){e.preventDefault();const r=ln.getBoundingClientRect();zoomAt(e.deltaY<0?1.25:.8,VW0+(e.clientX-r.left)/r.width*vS())}
+  else if(VWS){e.preventDefault();setView(VW0+(e.deltaX||e.deltaY)/600*vS(),vS())}},{passive:false});
 map.addEventListener("pointerup",()=>{if(!mdrag)return;mdrag.el.classList.remove("lifting");const m=mdrag.moved;mdrag=null;if(m){justDragged=true;setTimeout(()=>justDragged=false,0);save();render();bchanged()}});
 // extras
 twBtn.onclick=()=>{document.body.classList.toggle("tw");twBtn.classList.toggle("open")};
@@ -1477,9 +1511,11 @@ map.onclick=e=>{
   const b=beats.find(x=>x.id==el.dataset.id), r=el.getBoundingClientRect();
   pop.innerHTML=`<h4 style="border-left:3px solid var(--${b.c});padding-left:8px">${escH(b.t)}</h4>
     <small>${b.a?`⚑ Anclado a «${escH(b.a.x)}»`:`${pp(b)} · ${b.l} pág.`} · Outline ${b.lane}</small><p>${escH(b.body)||"Sin descripción"}</p>
-    <div class="row"><button class="btn" data-p="go">Ir al guion</button><button class="btn" data-p="board">Ver en tablero</button><button class="btn" data-p="edit">Editar</button></div>`;
+    ${b.a?"":`<p style="opacity:.75">No está atado a ningún texto. Poné el cursor donde empieza y tocá <b>Empezar acá</b>.</p>`}
+    <div class="row"><button class="btn" data-p="go">Ir al guion</button><button class="btn" data-p="here" title="Este beat empieza en el párrafo donde está el cursor">Empezar acá</button><button class="btn" data-p="board">Ver en tablero</button><button class="btn" data-p="edit">Editar</button></div>`;
   pop.onclick=ev=>{const a=ev.target.dataset.p;if(!a)return;pop.style.display="none";
     if(a==="go")goBeat(b);
+    if(a==="here")ED.startHere(b);
     if(a==="edit")openBeat(b);
     if(a==="board"){document.querySelector('[data-v=board]').click();const c=cards.querySelector(`[data-id="${b.id}"]`);
       if(c){c.scrollIntoView({block:"center",inline:"center",behavior:"smooth"});c.classList.add("flash");setTimeout(()=>c.classList.remove("flash"),1400)}}};
@@ -1654,12 +1690,45 @@ function drawLanes(){
   const pl=$("paceLane"),sl=$("scriptLane");if(!pl||!sl)return;
   const max=Math.max(1,...data.scenes.map(s=>s.lines));
   pl.innerHTML=data.scenes.map((s,k)=>{const d=Math.round(s.dlg/Math.max(1,s.lines)*100);
-    return `<i style="position:absolute;bottom:2px;left:${pct(pageFloat(s.b))};width:max(3px,calc(${s.lines/LINES/PAGES*100}% - 1px));height:calc(${Math.max(12,s.lines/max*100)}% - 4px);animation:none" title="Escena ${k+1}: ${s.lines} líneas, ${d}% diálogo"><b style="height:${d}%;background:var(--accent)"></b><b style="flex:1;background:#8a8f9866"></b></i>`}).join("");
+    return `<i style="position:absolute;bottom:2px;left:${pct(pageFloat(s.b))};width:max(3px,calc(${pw(s.lines/LINES)}% - 1px));height:calc(${Math.max(12,s.lines/max*100)}% - 4px);animation:none" title="Escena ${k+1}: ${s.lines} líneas, ${d}% diálogo"><b style="height:${d}%;background:var(--accent)"></b><b style="flex:1;background:#8a8f9866"></b></i>`}).join("");
   const c=caret();
   sl.innerHTML=data.scenes.map(s=>`<div class="scene" title="${esc(s.text)}" style="left:${pct(pageFloat(s.b))};background:var(${s.ext?"--ext":"--int"})"></div>`).join("")+
-    `<div class="cursor" style="left:${pct(pageFloat(c?.b))}"></div>`+(nPages>PAGES?`<div class="over" style="width:${(nPages-PAGES)/nPages*100}%"></div>`:"");
-  window.placeAnchored?.();
+    `<div class="cursor" style="left:${pct(pageFloat(c?.b))}"></div>`+(nPages>PAGES?`<div class="over" style="${VWS?`left:${pct(PAGES+1)};width:auto`:`width:${(nPages-PAGES)/nPages*100}%`}"></div>`:"");
+  window.placeAnchored?.();drawMarks();beatChipSoon();
 }
+// franjas de color en el margen: qué párrafos son de cada beat anclado (Outline 1 afuera, Outline 2 adentro)
+let bmEl=null;
+function drawMarks(){
+  if(!bmEl){bmEl=document.createElement("div");bmEl.id="bmarks";$("pages").appendChild(bmEl)}
+  const out=[],bs=blocks(),last=bs.at(-1);
+  for(const lane of [1,2]){
+    const L=beats.filter(b=>b.lane===lane&&b.a).map(b=>({b,s:findRef(b.a)})).filter(x=>x.s).sort((p,q)=>p.s.offsetTop-q.s.offsetTop);
+    L.forEach((x,k)=>{const top=x.s.offsetTop,e=x.b.z&&findRef(x.b.z);let bot;
+      if(e&&e.offsetTop>=top)bot=e.offsetTop+e.offsetHeight;else if(L[k+1])bot=L[k+1].s.offsetTop-4;else bot=last?last.offsetTop+last.offsetHeight:top+16;
+      const c=`var(--${x.b.c||"c1"})`;
+      out.push(`<i class="bmb l${lane}" style="top:${top}px;height:${Math.max(8,bot-top)}px;background:${c}"></i><b class="bml l${lane}" style="top:${top}px;color:${c}" title="${escA(x.b.t)}">${esc(x.b.t)}</b>`)})}
+  bmEl.innerHTML=out.join("")}
+// "Escribiendo: …": el beat del párrafo donde está el cursor; elegir otro lo empieza en ese párrafo
+let lastBlk=null,chipT=0;
+// el navegador no siempre avisa (selectionchange) al hacer clic en un renglón vacío: también se lee al soltar
+// mouse o tecla, y al empezar cualquier clic (antes de que un menú se lleve el cursor)
+const grabBlk=()=>{let n=getSelection().anchorNode;while(n&&n.parentNode!==doc)n=n.parentNode;if(n){lastBlk=n;beatChipSoon()}};
+document.addEventListener("selectionchange",grabBlk);document.addEventListener("pointerdown",grabBlk,true);
+doc.addEventListener("mouseup",()=>setTimeout(grabBlk));doc.addEventListener("keyup",grabBlk);
+function curBlk(){return lastBlk&&lastBlk.isConnected?lastBlk:null}
+function beatAt(blk,lane){let best=null,bt=-1;
+  for(const b of beats){if(b.lane!==lane||!b.a)continue;const s=findRef(b.a);if(!s||s.offsetTop>blk.offsetTop||s.offsetTop<bt)continue;
+    const e=b.z&&findRef(b.z);if(e&&e.offsetTop>=s.offsetTop&&blk.offsetTop>e.offsetTop)continue;best=b;bt=s.offsetTop}
+  return best}
+function beatChipSoon(){clearTimeout(chipT);chipT=setTimeout(beatChip,150)}
+function beatChip(){const el=$("sBeat");if(!el)return;el.hidden=!beats.some(x=>x.lane);const blk=curBlk(),b=blk&&(beatAt(blk,2)||beatAt(blk,1));
+  el.textContent=b?"◆ "+b.t:"◆ Sin beat";el.style.color=b?`var(--${b.c||"c1"})`:""}
+function startHere(b){const blk=curBlk()||blocks()[0];if(!blk)return;brecord();b.a=refOf(blk);delete b.z;beatsDone();beatChip();toast(`Desde acá escribís «${b.t}»`);
+  if(document.querySelector('[data-v=script]')?.classList.contains("on"))setTimeout(()=>{if(blk.isConnected)place(blk,blk.textContent.length)},30)}   // seguir escribiendo sin otro clic
+$("sBeat").addEventListener("click",e=>{const blk=curBlk(),c2=blk&&beatAt(blk,2),c1=blk&&beatAt(blk,1),by=(a,b)=>a.s-b.s;
+  const it=l=>beats.filter(b=>b.lane===l).sort(by).map(b=>({label:"Empezar acá: "+b.t,on:b===(l===2?c2:c1),act:()=>startHere(b)}));
+  const items=[...it(2),...(beats.some(b=>b.lane===1)&&beats.some(b=>b.lane===2)?["-"]:[]),...it(1)];
+  if(items.length)showCtx(e.clientX,e.clientY,items)});
 // anclas de beats: {id del párrafo, i = posición entre los párrafos con texto, x = comienzo del texto}
 // el id no sobrevive al reabrir un guion (Fountain no lo guarda), por eso se busca también por posición y texto
 function refOf(b){if(!b.dataset.id)ser();const full=blocks().filter(x=>x.textContent.trim());return {id:b.dataset.id,i:full.indexOf(b),x:b.textContent.trim().slice(0,40)}}
@@ -2262,7 +2331,8 @@ window.ED={blocks,drawLanes,relayout:()=>{layout();refreshUI()},
   record:()=>{typing=false;record()},
   beatsChanged:()=>{setDirty(true);autosave()},
   curPage:()=>{const c=caret();return c?Math.floor(pageFloat(c.b)):1},
-  pages:()=>nPages,findRef,beatSpan,
+  pages:()=>nPages,findRef,beatSpan,startHere,
+  textEnd:()=>{const l=blocks().at(-1);return l?pageFloat(l)+l.offsetHeight/(PH+GAP):1},
   gotoBlock:b=>setTimeout(()=>{place(b,0);b.scrollIntoView({block:"center",behavior:"smooth"})},60),
   gotoPage:p=>{const bs=blocks();const b=bs.find(x=>pageFloat(x)>=p)||bs.at(-1);setTimeout(()=>{place(b,0);b.scrollIntoView({block:"center",behavior:"smooth"})},60)},
   parseFountain,fileText,openText,versions:loadVersions};
@@ -2719,6 +2789,7 @@ function beatItems(b,onMap){
   return [
     {ic:"✎",label:"Editar…",act:()=>openBeat(b)},
     {ic:"↪",label:"Ir al guion",dis:!b.lane,act:()=>goBeat(b)},
+    {ic:"✎",label:"Empezar acá (en el cursor)",dis:!b.lane,act:()=>startHere(b)},
     ...(b.a?[{ic:"⚐",label:"Quitar anclaje al texto",act:()=>{brecord();delete b.a;delete b.z;beatsDone();toast("Vuelve a ubicarse por página")}}]:[]),
     onMap?{ic:"▦",label:"Ver en el tablero",act:()=>{view("board");const c=cards.querySelector(`[data-id="${b.id}"]`);if(c){c.scrollIntoView({block:"center",inline:"center",behavior:"smooth"});c.classList.add("flash");setTimeout(()=>c.classList.remove("flash"),1400)}}}
           :{ic:"⤳",label:"Conectar desde acá",act:()=>{connMode=true;connFrom=b;connBtn.classList.add("on");cards.querySelector(`[data-id="${b.id}"]`)?.classList.add("pick");toast("Tocá la tarjeta de destino")}},
@@ -2735,7 +2806,7 @@ function boardItems(e){
 }
 function mapItems(e){
   const lanes=[...document.querySelectorAll("#map .lane")],lane=e.target.closest(".lane"),n=lanes.indexOf(lane);
-  let page=null;if(lane&&n<2){const r=lane.getBoundingClientRect();page=Math.max(1,Math.round(((e.clientX-r.left)/r.width*PAGES+1)*8)/8)}
+  let page=null;if(lane&&n<2){const r=lane.getBoundingClientRect();page=Math.max(1,Math.round((VW0+(e.clientX-r.left)/r.width*vS())*8)/8)}
   return [
     {ic:"◆",label:n===0||n===1?`Nuevo beat acá (Outline ${n+1}, pág. ${Math.floor(page)})`:"Nuevo beat en la página actual",act:()=>newBeatHere(n===1?2:1,page)},
     {ic:"◫",label:"Plantilla de estructura…",act:()=>{view("board");modal.classList.add("show")}},
