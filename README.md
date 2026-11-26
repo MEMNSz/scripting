@@ -15,7 +15,7 @@ Integra herramientas de escritura, planificación narrativa, construcción de mu
 Dos entornos de escritura adaptados a las necesidades de cada formato.
 
 ### Guion cinematográfico
-<img width="1579" height="933" alt="imagen" src="https://github.com/user-attachments/assets/27b1c2da-ac81-4a7c-af91-a9625e43d9d3" />
+<img width="1580" height="936" alt="imagen" src="https://github.com/user-attachments/assets/a2e923c2-1733-4e3d-8b2c-804e3af7bab3" />
 
 - Formato de guion al estilo de Final Draft.
 - Paginación automática.
