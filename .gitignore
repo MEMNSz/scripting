@@ -1,0 +1,22 @@
+# Respaldos de ediciones (quedan solo en la PC)
+*.bak*
+
+# Entornos y cachés
+.venv/
+__pycache__/
+
+# Servidor de salas (Cloudflare): dependencias, estado local y claves
+sync/node_modules/
+sync/.wrangler/
+sync/.dev.vars
+sync/.dev.vars*
+
+# Compilados de la ventana (van en el paquete de cada versión, no en el código)
+ventana/obj/
+ventana/bin/
+ventana/out/
+ventana/scripting/
+
+# Voces de lectura: pesadas, se descargan aparte
+voces/*.onnx
+voces/*.onnx.json

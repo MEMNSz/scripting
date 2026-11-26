@@ -1,0 +1,9 @@
+{
+  "name": "Scripting",
+  "short_name": "Scripting",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#1e1f22",
+  "theme_color": "#17181a",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
