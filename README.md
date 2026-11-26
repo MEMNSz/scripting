@@ -30,16 +30,6 @@
 
 ---
 
-## Una historia. Un solo espacio.
-
-**Scripting** es un entorno de escritura y desarrollo narrativo para Windows, diseñado para guionistas, novelistas y creadores de historias.
-
-Integra la escritura, la planificación narrativa, la construcción de mundos, la preproducción audiovisual y la edición colaborativa en una única aplicación.
-
-Sin necesidad de alternar entre programas para desarrollar una misma historia.
-
----
-
 ## Escritura
 
 Dos entornos de escritura especializados, adaptados a las necesidades de cada formato.
