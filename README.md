@@ -1,3 +1,6 @@
+
+#VIBECODEADO XD
+
 # Scripting
 
 Editor de guiones y novelas para Windows.
